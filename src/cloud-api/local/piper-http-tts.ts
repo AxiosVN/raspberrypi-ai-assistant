@@ -53,24 +53,23 @@ const piperHttpTTS = async (
     const tempWavFile = path.join(ttsDir, `piper_http_${now}.wav`);
     const convertedWavFile = path.join(ttsDir, `piper_http_${now}_converted.wav`);
 
-    // curl -X POST -H 'Content-Type: application/json' -d '{ "text": "This is a test." }' -o test.wav localhost:8805
-    // text may contain double quotes, need to escape them
-    const escapedText = text.replace(/"/g, '\\"');
-
-    const piperProcess = spawn('curl', [
-      "-X",
+    // Piper's HTTP API accepts synthesis requests at /synthesize, not /.
+    const piperProcess = spawn("curl", [
+      "--fail",
+      "--show-error",
+      "--request",
       "POST",
       "-H",
       "Content-Type: application/json",
-      "-d",
-      `{ "text": "${escapedText}", "length_scale": ${piperHttpLengthScale} }`,
+      "--data-binary",
+      JSON.stringify({
+        text,
+        length_scale: Number(piperHttpLengthScale),
+      }),
       "-o",
       tempWavFile,
-      `${piperHttpHost}:${piperHttpPort}`
+      `http://${piperHttpHost}:${piperHttpPort}/synthesize`,
     ]);
-
-    piperProcess.stdin.write(text);
-    piperProcess.stdin.end();
 
     piperProcess.on("close", async (code: number) => {
       if (code !== 0) {
